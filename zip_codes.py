@@ -11,7 +11,7 @@ import numpy as np
 
 class ZC():
     ''' loads zip code information '''
-    def __init__(self, fdir=r'C:\PythonBC\Project', fname='zip_code_database.csv'):
+    def __init__(self, fdir=r'C:\PythonBC\root', fname='zip_code_database.csv'):
         self.fdir = fdir
         self.fname = fname
         self.ZC = self.init_zipcodes()
@@ -133,7 +133,7 @@ class ZC():
 #%% useage examples
 
 ### single-line use
-#zc = ZC() #initialize
+#zc = ZC(fdir=r'C:\PythonBC\root') #initialize
 #zc.zip_to_tz('43212') # 'America/New_York'
 #zc.zip_to_state('43212') # 'OH'
 #zc.zip_to_county('43212') # 'Frankin'
@@ -157,3 +157,4 @@ class ZC():
 # compute local time
 #df = zc.shift_tz_wrap(df)
 #df['hour'] = zc.local_hour(df)
+
