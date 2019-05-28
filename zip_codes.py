@@ -11,7 +11,7 @@ import numpy as np
 
 class ZC():
     ''' loads zip code information '''
-    def __init__(self, fdir=r'C:\PythonBC\Project', fname='zip_code_database.csv'):
+    def __init__(self, fdir=r'C:\Users\Evan\python\root', fname='zip_code_database.csv'):
         self.fdir = fdir
         self.fname = fname
         self.ZC = self.init_zipcodes()
@@ -54,7 +54,7 @@ class ZC():
                   'irs_estimated_population_2015': float}
         ZC = pd.read_csv( os.path.join(fdir, fname), skiprows=1, names=mycols, dtype=mydtypes )
         ZC = ZC.set_index('zipcode')
-        return ZC[['state', 'timezone', 'county']]
+        return ZC[['state', 'timezone', 'county', 'latitude', 'longitude']]
         
     def zip_to_tz(self, myzip):
         ''' given a zip code, returns a time zone '''
@@ -106,6 +106,16 @@ class ZC():
         this function is a vectorized version of zip_to_county, about 600x faster'''
         ZC = self.ZC
         return ZC.reindex(myzip).county.values
+        
+    def zip_to_lat_2(self, myzip):
+        '''given a zip code, returns the latitude'''
+        ZC = self.ZC
+        return ZC.reindex(myzip).latitude.values
+    
+    def zip_to_lon_2(self, myzip):
+        '''given a zip code, returns the longitude'''
+        ZC = self.ZC
+        return ZC.reindex(myzip).longitude.values
     
     def shift_tz_3(self, pd_df):
         '''
