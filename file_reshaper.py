@@ -100,8 +100,8 @@ def reshape_files(data_dir=r'C:\PythonBC\RootData', f_ext='.csv', big_zip=False,
 #%% useage example
 
 #reshaping the files (only do once)
-data_dir=r'C:\Users\Tebe\Documents\Root Ad Data\csvs'
-reshape_files(data_dir=data_dir)
+#data_dir=r'C:\PythonBC\RootData'
+#reshape_files()
 
 ##load dataframes from disk when you want to use them
 #df_installs = lf.temp_load( os.path.join(data_dir, 'installs.gzip') ) # 37.8 ms to 4 days worth of data
