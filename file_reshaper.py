@@ -73,14 +73,14 @@ def reshape_files(data_dir=r'C:\PythonBC\RootData', f_ext='.csv', big_zip=False,
     mycols = [ele for ele in mycols if ele not in unwanted]
 
     # get a list of all the csv files in the data director
-    data_dir = r'C:\PythonBC\RootData'
     myfiles = glob.glob( os.path.join(data_dir, '*'+f_ext) )
 
     # sort <myfiles>
     myfiles = sorted( myfiles )
     
     # remove the big zip file from <myfiles>
-    myfiles = [ele for ele in myfiles if not bigzipname] 
+    if bigzipname in myfiles:
+        myfiles.remove(bigzipname)
 
     if big_zip: # load the files from the mega zip file
         print(f"this code not written yet. let's pretend this opened {bigzipname}")
@@ -90,10 +90,10 @@ def reshape_files(data_dir=r'C:\PythonBC\RootData', f_ext='.csv', big_zip=False,
             df_from_each_file = (lf.load_data(data_dir=data_dir, fname=f, all_cols=False, sub_cols=[col], **kwargs) for f in myfiles)
             df = pd.concat(df_from_each_file, ignore_index=True)
             #df = load_data(all_cols=False, sub_cols=[col], nrows=5000)
-            print('done!')
+            print('done')
             myfname = col + '.gzip'
             lf.temp_save(df, os.path.join(data_dir, myfname) ) # save to disk using parquet method
-            print(f'   {myfname} saved!')
+            print(f'   {myfname} saved')
     print('all done!')
     return
 

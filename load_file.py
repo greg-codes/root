@@ -136,7 +136,6 @@ def load_data(data_dir=r'C:\PythonBC\RootData', fname='2019-04-27.csv', Verbose=
     else:
         df = pd.read_csv(os.path.join(data_dir, fname), usecols=mycols, dtype=mydtype, sep=',', engine='c', **kwargs)
         
-
     if Verbose:
         print('memory size after loading:', mem_usage(df))
 
