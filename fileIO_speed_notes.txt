@@ -1,0 +1,54 @@
+time to run the following code segment: 57 seconds
+'''
+import os, sys, time
+sys.path.append(os.getcwd()) # add cwd to path
+
+from load_file import load_data, load_all_files, temp_save, temp_load
+from zip_codes import ZC # zip code database
+import pandas as pd
+import matplotlib.pyplot as plt
+plt.rcParams['figure.dpi'] = 200 # fix high-dpi display scaling issues
+import numpy as np
+import seaborn as sns
+
+# load zip code information
+zc = ZC()
+#%% load data
+fname = '2019-04-27.zip'
+data_dir = r'C:\PythonBC\Project\Data'
+
+start = time.time()
+df = load_data(fname=fname, data_dir=data_dir)
+
+#%% use geo_zip to calculate local times and other info.
+df = df.dropna(subset=['geo_zip']) # drop NaN values of zip codes
+df['tz'] = zc.zip_to_tz_2(df.geo_zip)
+df['state'] = zc.zip_to_state_2(df.geo_zip)
+df['tz'] = df.tz.astype('category')
+df['state'] = df.state.astype('category')
+df = df.dropna( subset=['tz']) # drop rows that don't have a timezone
+df = zc.shift_tz_wrap(df)
+df['hour'] = zc.local_hour(df)
+
+end = time.time()
+print(f'it took {end-start:.2f} seconds to load and process the CSV')
+'''
+
+time to save dataframe and then load it: 3.97 seconds
+'''
+start = time.time()
+temp_save(df, fname.split('.')[0]+'.gzip')
+df = temp_load(fname.split('.')[0]+'.gzip')
+end = time.time()
+print(f'it took {end-start:.2f} seconds to save and load the dataframe from disk')
+'''
+
+time to load dataframe from disk: 1.17 seconds
+'''
+start = time.time()
+df = temp_load(fname.split('.')[0]+'.gzip')
+end = time.time()
+print(f'it took {end-start:.2f} seconds to load the dataframe from disk')
+'''
+
+conclusion: if you are going to use the dataframe over more than 1 session, it's much faster to save and load using parquet
