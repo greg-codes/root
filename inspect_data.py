@@ -114,3 +114,81 @@ print(f'there are {len(allcats)} unique categories in this dataset')
 
 for c in allcats:
     print(c)
+    
+#%% verify that all dataframes have the same shape
+import glob
+gzips = glob.glob( os.path.join(data_dir, '*.gzip') )[2:] # list of column gzips
+name=[]; mem=[]; shape=[]; uniques=[]
+for f in gzips:
+    name.append( f.split('\\')[-1].split('.gzip')[0] )
+    print(f'loading {name[-1]}...', end='')
+    df = lf.temp_load( f )
+    mem.append( lf.mem_usage(df) )
+    shape.append( df_cats.shape )
+    uniques.append( len(df.iloc[:,0].unique()) ) # unique elements
+    print(' done')
+
+mem2 = [ float(s.split(' MB')[0]) for s in mem ] # convert mem to floats
+
+results = pd.DataFrame(np.column_stack([name, mem2, shape, uniques]), columns=['name', 'mem MB', 'rows', 'cols', 'uniques'])
+results['mem MB'] = results['mem MB'].astype(float)
+print(results)
+print(f'total memory footprint = {results["mem MB"].sum():5.2f} MB')
+
+#%% look at histograms
+fname = 'platform_carrier.gzip'
+df_clicks = lf.temp_load(os.path.join(data_dir,'clicks.gzip'))
+df_var = lf.temp_load(os.path.join(data_dir,fname))
+
+df = pd.concat([df_var, df_clicks], axis=1)
+
+ax = mp.make_countplot(df,col='platform_carrier', count='clicks')
+
+#%% zipcode-level analysis
+df1 = lf.temp_load(os.path.join(data_dir,'geo_zip.gzip'))
+df2 = lf.temp_load(os.path.join(data_dir,'clicks.gzip'))
+frames = [df1, df2]
+df = pd.concat(frames, axis=1)
+print(f'there are { df.geo_zip.isnull().sum()} ({100*df.geo_zip.isnull().sum() / df.shape[0]:3.3f}%) null zip codes ')
+
+df['zip_valid'] = df.geo_zip.notnull()
+# question: is there any correlation between a valid zip code and click status?
+ax = mp.make_countplot(df,col='zip_valid', count='clicks')
+
+df = df.dropna(subset=['geo_zip']) # drop NaN values of zip codes
+zc = ZC()
+df['state'] = zc.zip_to_state_2(df.geo_zip)
+print(f'there are { df.state.isnull().sum()} ({100*df.state.isnull().sum() / df.shape[0]:3.3f}%) null state rows')
+
+#%% state-level analysis
+df1 = lf.temp_load(os.path.join(data_dir,'geo_zip.gzip'))
+df2 = lf.temp_load(os.path.join(data_dir,'clicks.gzip'))
+frames = [df1, df2]
+df = pd.concat(frames, axis=1)
+zc = ZC()
+df['state'] = zc.zip_to_state_2(df.geo_zip)
+ax = mp.make_countplot(df,col='state', count='clicks')
+
+#%% day of week analysis
+df1 = lf.temp_load(os.path.join(data_dir,'day_of_week.gzip'))
+df2 = lf.temp_load(os.path.join(data_dir,'clicks.gzip'))
+frames = [df1, df2]
+df = pd.concat(frames, axis=1)
+ax = mp.make_countplot(df,col='day_of_week', count='clicks')
+
+
+
+
+#%% local hour analysis
+df1 = lf.temp_load(os.path.join(data_dir,'geo_zip.gzip'))
+df2 = lf.temp_load(os.path.join(data_dir,'clicks.gzip'))
+df3 = lf.temp_load(os.path.join(data_dir,'bid_timestamp_utc.gzip'))
+frames = [df1, df2, df3]
+df = pd.concat(frames, axis=1)
+df = df.dropna(subset=['geo_zip']) # drop NaN values of zip codes
+zc = ZC()
+df['tz'] = zc.zip_to_tz_2(df.geo_zip)
+df['tz'] = df.tz.astype('category')
+
+df['bid_timestamp_local'] = zc.shift_tz_wrap(df) # compute local time
+df['hour'] = zc.local_hour(df) # compute local hour
