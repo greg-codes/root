@@ -49,8 +49,22 @@ def unique_counter(pd_series):
     print( '{0} has {1} unique elements ({2}%)'.format(name, u_len, 100*u_len/pd_len) )
     return
 
-def load_data(data_dir=r'C:\PythonBC\RootData', fname='2019-04-27.csv', Verbose=False, **kwargs):
-    '''loads a CSV or ZIP file to a pandas dataframe. note: can only work with a single compressed file, not a bundle of compressed files'''
+def load_data(data_dir=r'C:\PythonBC\RootData', fname='2019-04-27.csv', Verbose=False, all_cols=True, sub_cols=['geo_zip'], **kwargs):
+    '''loads a CSV or ZIP file to a pandas dataframe. note: can only work with a single compressed file, not a bundle of compressed files
+    
+    input parameters:
+
+    data_dir: directory of fname
+    fname: name of file to be read (don't include directory info)
+    Verbose: should we print the memory size of the dataframe?
+    all_cols: set True to load all columns from fname. set False if you only
+        want a subset.
+    sub_cols: only implemented if all_cols==False. sub_cols is a list of 
+        strings of column names to be loaded. must be comprised of the elements 
+        of the mycols list (defined below). note: sub_cols overrides the hard-
+        coded <unwanted> list.
+    
+    '''
 
     mycols = ['',
           'auction_id',
@@ -79,10 +93,16 @@ def load_data(data_dir=r'C:\PythonBC\RootData', fname='2019-04-27.csv', Verbose=
           'spend',
           'clicks',
           'installs']
-    #specify unwanted columns in <unwanted>
-    unwanted = ['auction_id', 'platform_os', 'day', 'month', 'year', 'hour']
-    mycols = [ele for ele in mycols if ele not in unwanted] 
     
+    #we never want these columns, drop them from <mycols>
+    unwanted = ['auction_id', 'platform_os', 'day', 'month', 'year', 'hour']
+    mycols = [ele for ele in mycols if ele not in unwanted]
+
+    if not all_cols:
+        # extract the user-defined columns from <mycols>
+        mycols = [ele for ele in mycols if ele in sub_cols]
+    
+    # specify datatypes for each column
     mydtype = {'auction_id': str,
         'inventory_source': 'category',
         'app_bundle': 'category',
@@ -111,17 +131,27 @@ def load_data(data_dir=r'C:\PythonBC\RootData', fname='2019-04-27.csv', Verbose=
         'installs': np.bool}
     
     #load data
-    df = pd.read_csv(os.path.join(data_dir, fname), usecols=mycols[1:], dtype=mydtype, sep=',', engine='c', **kwargs)
+    if all_cols: # drop the unnamed 1st column ('')
+        df = pd.read_csv(os.path.join(data_dir, fname), usecols=mycols[1:], dtype=mydtype, sep=',', engine='c', **kwargs)
+    else:
+        df = pd.read_csv(os.path.join(data_dir, fname), usecols=mycols, dtype=mydtype, sep=',', engine='c', **kwargs)
+        
 
     if Verbose:
         print('memory size after loading:', mem_usage(df))
 
     # do some dtype conversions on columns to save memory, clean data
-    df.bid_timestamp_utc = pd.to_datetime( df.bid_timestamp_utc, format='%Y-%m-%d %H:%M:%S.%f', errors='coerce', utc=True ) # fix timestamp
-    df.geo_zip = df.geo_zip.apply(fix_zipcode)
-    #df.hour = fix_hour(df.hour)
-    df.geo_zip = df.geo_zip.astype('category')
     
+    if 'bid_timestamp_utc' in mycols:
+        df.bid_timestamp_utc = pd.to_datetime( df.bid_timestamp_utc, format='%Y-%m-%d %H:%M:%S.%f', errors='coerce', utc=True ) # fix timestamp
+    
+    if 'geo_zip' in mycols:
+        df.geo_zip = df.geo_zip.apply(fix_zipcode)
+        df.geo_zip = df.geo_zip.astype('category')
+
+    #if 'hour' in mycols:
+    #    df.hour = fix_hour(df.hour)
+
     # drop useless columns
     #df = df.drop(columns = ['auction_id']) # has no predictive power
     #df = df.drop(columns = ['platform_os']) # only consists of 'Android' or '-1'

@@ -54,7 +54,7 @@ class ZC():
                   'irs_estimated_population_2015': float}
         ZC = pd.read_csv( os.path.join(fdir, fname), skiprows=1, names=mycols, dtype=mydtypes )
         ZC = ZC.set_index('zipcode')
-        return ZC[['state', 'timezone', 'county']]
+        return ZC[['state', 'timezone', 'county', 'latitude','longitude']]
         
     def zip_to_tz(self, myzip):
         ''' given a zip code, returns a time zone '''
@@ -88,6 +88,16 @@ class ZC():
         if type(ans) == float:
             ans = None # empty values in database return nan (float)
         return ans
+    
+    def zip_to_lat_2(self, myzip):
+        '''given a zip code, returns the latitude'''
+        ZC = self.ZC
+        return ZC.reindex(myzip).latitude.values
+    
+    def zip_to_lon_2(self, myzip):
+        '''given a zip code, returns the longitude'''
+        ZC = self.ZC
+        return ZC.reindex(myzip).longitude.values
     
     def zip_to_tz_2(self, myzip):
         '''given a zip code, returns the time zone

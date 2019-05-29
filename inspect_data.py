@@ -25,16 +25,16 @@ fname_28 = '2019-04-28.csv'
 
 data_dir = r'C:\PythonBC\RootData'
 
-df_27 = load_wrapper(fname=fname_27, data_dir=data_dir, nrows=50000)
-df_28 = load_wrapper(fname=fname_28, data_dir=data_dir, nrows=50000)
+#df_27 = load_wrapper(fname=fname_27, data_dir=data_dir, nrows=50000)
+#df_28 = load_wrapper(fname=fname_28, data_dir=data_dir, nrows=50000)
 
 #%% save pd.df to disk after we are done modifying it
-temp_save(df_27, os.path.join(data_dir,fname_27.split('.')[0]+'.gzip'))
-temp_save(df_28, os.path.join(data_dir,fname_28.split('.')[0]+'.gzip'))
+#temp_save(df_27, os.path.join(data_dir,fname_27.split('.')[0]+'.gzip'))
+#temp_save(df_28, os.path.join(data_dir,fname_28.split('.')[0]+'.gzip'))
 
 # load pandas.df from disk
-#df_27 = temp_load(os.path.join(data_dir,fname_27.split('.')[0]+'.gzip'))
-#df_28 = temp_load(os.path.join(data_dir,fname_28.split('.')[0]+'.gzip'))
+df_27 = temp_load(os.path.join(data_dir,fname_27.split('.')[0]+'.gzip'))
+df_28 = temp_load(os.path.join(data_dir,fname_28.split('.')[0]+'.gzip'))
 
 #%% visualize data
 #look at data that resulted in a click
@@ -60,6 +60,7 @@ g = g.map(sns.distplot, "hour", bins=list(np.arange(0,25)), norm_hist=True, labe
 
 
 #%% first pass at making a model for clicks
+'''
 from sklearn.preprocessing import OneHotEncoder
 from sklearn import svm
 
@@ -78,9 +79,9 @@ clf.fit(X_27, y_27)
 print(f'score (self-fitting): {clf.score(X_27,y_27)}')
 
 print('this model does not converge...')
-
+'''
 #%% compare this fit to another day
-
+'''
 print(f' # of bandwidths the same?: {len(df_27.platform_bandwidth.unique()) == len(df_28.platform_bandwidth.unique())}') 
 print(f' # of device_makes the same?: {len(df_27.platform_device_make.unique()) == len(df_28.platform_device_make.unique())}') 
       
@@ -99,3 +100,15 @@ print(f'score (train on 27th, test on 28th) = {clf.score(X_28,y_28)}')
 
 from sklearn.model_selection import cross_val_score
 cross_val_score(clf, X_28, y_28, scoring='recall_macro', cv=5) 
+'''
+
+#%% determine number of categories
+
+cats = df_27.category.unique().tolist()
+cats = [x for x in cats if str(x) != 'nan'] # remove nans
+allcats = []
+for i in cats:
+    allcats.append( i.split(','))
+allcats = [item for sublist in allcats for item in sublist]
+allcats = list(dict.fromkeys(allcats))
+print(f'there are {len(allcats)} unique categories in this dataset')
