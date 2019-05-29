@@ -6,7 +6,8 @@ Created on Tue May 28 19:17:01 2019
 
 """
 
-import os, glob
+import os, glob, sys
+sys.path.append(os.getcwd()) # add cwd to path
 import load_file as lf
 import pandas as pd
 #import numpy as np
@@ -74,6 +75,12 @@ def reshape_files(data_dir=r'C:\PythonBC\RootData', f_ext='.csv', big_zip=False,
     # get a list of all the csv files in the data director
     data_dir = r'C:\PythonBC\RootData'
     myfiles = glob.glob( os.path.join(data_dir, '*'+f_ext) )
+
+    # sort <myfiles>
+    myfiles = sorted( myfiles )
+    
+    # remove the big zip file from <myfiles>
+    myfiles = [ele for ele in myfiles if not bigzipname] 
 
     if big_zip: # load the files from the mega zip file
         print(f"this code not written yet. let's pretend this opened {bigzipname}")
