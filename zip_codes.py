@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # -*- coding: utf-8 -*-
 """
 Created on Sat May 25 20:29:35 2019
@@ -167,4 +168,3 @@ class ZC():
 # compute local time
 #df = zc.shift_tz_wrap(df)
 #df['hour'] = zc.local_hour(df)
-
