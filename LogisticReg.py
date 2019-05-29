@@ -33,9 +33,44 @@ from sklearn.linear_model import SGDClassifier
 from sklearn.preprocessing import StandardScaler, RobustScaler
 from sklearn.model_selection import cross_val_score
 
-#sys.path.append('C:/Users/Tebe/Documents/Root Ad Auction/root')
 sys.path.append(os.getcwd())
 import load_file as lf
+
+plt.rcParams['figure.dpi'] = 240
+#%%
+def logistic_roc_curve(log_fpr, log_tpr):
+    plt.figure()
+    plt.title('Logistic Regression ROC Curve', fontsize=16)
+    plt.plot(log_fpr, log_tpr, 'b-', linewidth=2)
+    plt.plot([0, 1], [0, 1], 'r--')
+    plt.xlabel('False Positive Rate', fontsize=16)
+    plt.ylabel('True Positive Rate', fontsize=16)
+    plt.axis([-0.01,1,0,1])
+
+def plot_confusion_matrix(cm, classes,
+                          normalize=False,
+                          title='Confusion matrix',
+                          cmap=plt.cm.Blues):
+    """
+    This is a function that prints and plots the confusion matrix
+    """
+    plt.imshow(cm, interpolation='nearest', cmap=cmap)
+    plt.title(title)
+    plt.colorbar()
+    tick_marks = np.arange(len(classes))
+    plt.xticks(tick_marks, classes, rotation=0)
+    plt.yticks(tick_marks, classes)
+
+
+    thresh = cm.max() / 2.
+    for i, j in itertools.product(range(cm.shape[0]), range(cm.shape[1])):
+        plt.text(j, i, cm[i, j],
+                 horizontalalignment="center",
+                 color="white" if cm[i, j] > thresh else "black")
+
+    plt.tight_layout()
+    plt.ylabel('True label')
+    plt.xlabel('Predicted label')
 
 #%%
 directory = 'C:/Users/Tebe/Documents/Root Ad Data/csvs'
@@ -50,14 +85,13 @@ for i in np.arange(1,2):
 	df = df.append(lf.load_data(fname=fn, data_dir=directory))
 
 #%%
-#Handling of NaNs in platform device screen size, replace with 'UNKNOWN'
 imp = SimpleImputer(missing_values=np.nan, strategy='constant', fill_value='UNKNOWN')
 imp.fit(df[['platform_device_screen_size']])
 df['platform_device_screen_size'] = imp.transform(df[['platform_device_screen_size']])
 imp = SimpleImputer(missing_values=np.nan, strategy='constant', fill_value='-1')
 imp.fit(df[['platform_carrier']])
 df['platform_carrier'] = imp.transform(df[['platform_carrier']])
-imp = SimpleImputer(missing_values=np.nan, strategy='constant', fill_value='UNKOWN')
+imp = SimpleImputer(missing_values=np.nan, strategy='constant', fill_value='UNKNOWN')
 imp.fit(df[['platform_bandwidth']])
 df['platform_bandwidth'] = imp.transform(df[['platform_bandwidth']])
 
@@ -74,10 +108,7 @@ df_clicks = df.loc[df['clicks'] == 1]
 df_non_clicks = df.loc[df['clicks'] == 0][:number_of_clicks]
 df_balanced = pd.concat([df_clicks, df_non_clicks])
 #%%
-#vectorizer = FeatureHasher(input_type='string')
-#screen_size = pd.get_dummies(df_balanced.platform_device_screen_size)
-#carrier = pd.get_dummies(df_balanced.platform_carrier)
-#bandwidth = pd.get_dummies(df_balanced.platform_bandwidth)
+#Encoding categorical data using the "hashing trick"
 
 vectorizer = FeatureHasher(n_features=2**25, input_type='string')
 invent_src = vectorizer.fit_transform(df_balanced.inventory_source)
@@ -91,13 +122,12 @@ day_of_week = vectorizer.fit_transform(df_balanced.day_of_week)
 scaler = RobustScaler()#StandardScaler()
 bid_floor = np.transpose(csr_matrix(scaler.fit_transform([df_balanced.bid_floor.values])))
 #spend = np.transpose(csr_matrix(scaler.fit_transform([df_balanced.spend.values])))
-'''
-Need to include localhour, segments, creative_type, creative_size, spend
-'''
+
 #%%
 y = df_balanced['clicks']
 X = hstack([invent_src, screen_size, carrier, bandwidth, maker, model, day_of_week, bid_floor])
 #%%
+#Dimensionality reduction using TruncatedSVD
 '''
 # TruncatedSVD
 t0 = time.time()
@@ -106,7 +136,7 @@ t1 = time.time()
 print("Truncated SVD took {:.2} s".format(t1 - t0))
 '''
 #%%
-## TruncatedSVD scatter plot
+## TruncatedSVD scatter plot, only for n_components=2
 #fig, ax = plt.subplots()
 #ax.scatter(X_reduced_svd[:,0], X_reduced_svd[:,1], c=(y == 0), cmap='coolwarm', label='No Click', linewidths=2, alpha=0.1)
 #ax.scatter(X_reduced_svd[:,0], X_reduced_svd[:,1], c=(y == 1), cmap='coolwarm', label='Click', linewidths=2, alpha=0.1)
@@ -132,9 +162,6 @@ day_of_week = vectorizer.fit_transform(df.day_of_week)
 bid_floor = np.transpose(csr_matrix(df.bid_floor.values))
 spend = np.transpose(csr_matrix(df.spend.values))
 
-#Need to include localhour, segments, creative_type, creative_size, spend
-
-
 y = df['clicks']
 #,'platform_device_screen_size
 X = hstack([invent_src, screen_size, carrier, bandwidth, maker, model, day_of_week, bid_floor, spend])
@@ -149,9 +176,8 @@ print('CTR before SMOTE:',100.0*sum(y_train)/len(y_train),'% ', \
 #%%
 model = LogisticRegression(solver='saga',n_jobs=8, penalty='l2', verbose=5,C=0.01)
 model.fit(X_train, y_train)
-#model.fit(X_train, y_train)
-print(model.score(X_train,y_train))
-#print(model.score(X_test,y_test))
+print('Model score: ', model.score(X_train,y_train))
+
 #%%
 '''
 model = SGDClassifier(loss='log', n_jobs=8)
@@ -160,41 +186,19 @@ model.fit(X_train, y_train)
 print(model.score(X_train,y_train))
 '''
 #%%
+'''
 training_score = cross_val_score(model, X_train, y_train, cv=5)
 print(training_score)
+'''
 #%%
-# Logistic Regression 
+'''
+# GridSearchCV to optimize parameters in LogisticRegression 
 log_reg_params = {"penalty": ['l1', 'l2'], 'C': [0.1, 1, 10]}#[0.001, 0.01, 0.1, 1, 10, 100, 1000]
 
 grid_log_reg = GridSearchCV(LogisticRegression(), log_reg_params, n_jobs=4)
 grid_log_reg.fit(X_train, y_train)
-# We automatically get the logistic regression with the best parameters.
 log_reg = grid_log_reg.best_estimator_
-#%%
-def plot_confusion_matrix(cm, classes,
-                          normalize=False,
-                          title='Confusion matrix',
-                          cmap=plt.cm.Blues):
-    """
-    This is a function that prints and plots the confusion matrix
-    """
-    plt.imshow(cm, interpolation='nearest', cmap=cmap)
-    plt.title(title)
-    plt.colorbar()
-    tick_marks = np.arange(len(classes))
-    plt.xticks(tick_marks, classes, rotation=0)
-    plt.yticks(tick_marks, classes)
-
-
-    thresh = cm.max() / 2.
-    for i, j in itertools.product(range(cm.shape[0]), range(cm.shape[1])):
-        plt.text(j, i, cm[i, j],
-                 horizontalalignment="center",
-                 color="white" if cm[i, j] > thresh else "black")
-
-    plt.tight_layout()
-    plt.ylabel('True label')
-    plt.xlabel('Predicted label')
+'''
 #%%
 y_train_pre = model.predict(X_train)
 cnf_matrix_tra = confusion_matrix(y_train, y_train_pre)
@@ -202,17 +206,8 @@ con_mat = confusion_matrix(y_train, y_train_pre)
 print(con_mat)
 #plot_confusion_matrix(con_mat)
 #%%
+#Plot ROC curve to get an idea of performance
 precision, recall, threshold = precision_recall_curve(y_train, y_train_pre)
-#%%
-def logistic_roc_curve(log_fpr, log_tpr):
-    plt.figure(figsize=(12,8))
-    plt.title('Logistic Regression ROC Curve', fontsize=16)
-    plt.plot(log_fpr, log_tpr, 'b-', linewidth=2)
-    plt.plot([0, 1], [0, 1], 'r--')
-    plt.xlabel('False Positive Rate', fontsize=16)
-    plt.ylabel('True Positive Rate', fontsize=16)
-    plt.axis([-0.01,1,0,1])
-
 fpr, tpr, thresold = roc_curve(y_train, y_train_pre)   
 logistic_roc_curve(fpr, tpr)
 plt.show()
