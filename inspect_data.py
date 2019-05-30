@@ -102,17 +102,18 @@ cross_val_score(clf, X_28, y_28, scoring='recall_macro', cv=5)
 '''
 
 #%% determine number of categories
-import time
 
 df_cats = lf.temp_load( os.path.join(data_dir, 'category.gzip') )
 cats = df_cats.category.unique().tolist()
 cats = [x for x in cats if str(x) != 'nan'] # remove nans
 allcats = []
 for i in cats:
-	allcats.append( i.split(','))
+	#allcats.append( i.split(',')) # comma-separated
+	allcats.append( i.split(' ')) # space-separated
 allcats = [item for sublist in allcats for item in sublist] # flatten list of lists
 allcats = list(dict.fromkeys(allcats)) # remove duplicates
-print(f'there are {len(allcats)} unique categories in this dataset')
+print(f'there are {len(cats)} unique bundles of categories in this dataset')
+print(f'there are {len(allcats)} unique IDF categories in this dataset')
 
 #for c in allcats:
 #	print(c)

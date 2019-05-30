@@ -14,7 +14,7 @@ from zip_codes import ZC # zip code database
 #import numpy as np
 #from zipfile import ZipFile
 
-def reshape_files(data_dir=r'C:\PythonBC\RootData', f_ext='.csv', big_zip=False, **kwargs):
+def reshape_files(data_dir=r'C:\PythonBC\RootData', f_ext='.csv', big_zip=False, all_cols=True, sub_cols=['geo_zip'], **kwargs):
 	'''
 	'reshapes' the data files. the original format of the data files provided
 	by root gives us one day's worth of data per file, with all variables
@@ -22,8 +22,7 @@ def reshape_files(data_dir=r'C:\PythonBC\RootData', f_ext='.csv', big_zip=False,
 	contains data from all days, but only one column. files are saved via the
 	parquet method (non-human-readable) as <column>.gzip for each column.
 	
-	running this file will this 'reshaping' on all files in data_dir 
-	matching *.f_ext.
+	running this file will 'reshape' all files in data_dir matching *.f_ext.
 	
 	input parameters:
 		data_dir: location of files
@@ -32,12 +31,18 @@ def reshape_files(data_dir=r'C:\PythonBC\RootData', f_ext='.csv', big_zip=False,
 		big_zip: True or False. If False, will perform the reshaping on all 
 			files in data_dir matching *f_ext. If True, the function will
 			perform the reshaping on bigzipname (hard-coded).
-		
+		all_cols: set True to load all columns from fname. set False if you 
+			only want a subset.
+		sub_cols: only implemented if all_cols==False. sub_cols is a list of 
+			strings of column names to be loaded. must be comprised of the 
+			elements of the mycols list (defined below). note: sub_cols 
+			overrides the hard-coded <unwanted> list.
 	'''
 	# define the file name of the large zip file. assumed structure is a .zip
 	# file with many .csv files inside
 	bigzipname = 'root_ad_auction_dataset_all_data.zip'
 
+	### determine which columns to load
 	# list of columns in the file
 	mycols = ['',
 			  'auction_id',
@@ -73,6 +78,11 @@ def reshape_files(data_dir=r'C:\PythonBC\RootData', f_ext='.csv', big_zip=False,
 	#drop the unwanted columns from mycols
 	mycols = [ele for ele in mycols if ele not in unwanted]
 
+	if not all_cols:
+		# extract the user-defined columns from <mycols> if they are also in <sub_cols>
+		mycols = [ele for ele in mycols if ele in sub_cols]
+	
+	### determine which files to load
 	# get a list of all the csv files in the data director
 	myfiles = glob.glob( os.path.join(data_dir, '*'+f_ext) )
 
@@ -82,19 +92,30 @@ def reshape_files(data_dir=r'C:\PythonBC\RootData', f_ext='.csv', big_zip=False,
 	# remove the big zip file from <myfiles>
 	if bigzipname in myfiles:
 		myfiles.remove(bigzipname)
-
+	
+	### load the columns and files
+	
 	if big_zip: # load the files from the mega zip file
 		print(f"this code not written yet. let's pretend this opened {bigzipname}")
 	else: # load files from individual csv/zip files
-		for col in mycols[1:]: # loop through all items in mycols
-			print(f'loading {col}...', end='')
-			df_from_each_file = (lf.load_data(data_dir=data_dir, fname=f, all_cols=False, sub_cols=[col], **kwargs) for f in myfiles)
-			df = pd.concat(df_from_each_file, ignore_index=True)
-			#df = load_data(all_cols=False, sub_cols=[col], nrows=5000)
-			print('done')
-			myfname = col + '.gzip'
-			lf.temp_save(df, os.path.join(data_dir, myfname) ) # save to disk using parquet method
-			print(f'   {myfname} saved')
+		if all_cols: # special case: need to remove the leading '' column
+			for col in mycols[1:]: # loop through all items in mycols
+				print(f'loading {col}...', end='')
+				df_from_each_file = (lf.load_data(data_dir=data_dir, fname=f, all_cols=False, sub_cols=[col], **kwargs) for f in myfiles)
+				df = pd.concat(df_from_each_file, ignore_index=True)
+				print('done')
+				myfname = col + '.gzip'
+				lf.temp_save(df, os.path.join(data_dir, myfname) ) # save to disk using parquet method
+				print(f'   {myfname} saved')
+		else:
+			for col in mycols: # loop through all items in mycols
+				print(f'loading {col}...', end='')
+				df_from_each_file = (lf.load_data(data_dir=data_dir, fname=f, all_cols=False, sub_cols=[col], **kwargs) for f in myfiles)
+				df = pd.concat(df_from_each_file, ignore_index=True)
+				print('done')
+				myfname = col + '.gzip'
+				lf.temp_save(df, os.path.join(data_dir, myfname) ) # save to disk using parquet method
+				print(f'   {myfname} saved')
 	print('all done!')
 	return
 
@@ -208,3 +229,14 @@ def local_hour_creator(data_dir=r'C:\PythonBC\RootData', f_ext='.csv', big_zip=F
 		print('temp gzip files deleted')
 		print('all done!')
 	return
+
+#%% example usage
+#define data directory
+#data_dir = r'C:\PythonBC\RootData'
+
+#reshape data from (days) to (columns) using *all columns* and save output as .gzip
+#reshape_files(data_dir=data_dir, f_ext='.csv')
+
+#reshape data from (days) to (columns) using *only specified columns* 
+#mysub_cols = ['category'] # specify which columns you want here
+#reshape_files(data_dir=data_dir, f_ext='.csv', all_cols=False, sub_cols=mysub_cols)

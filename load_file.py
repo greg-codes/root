@@ -125,7 +125,7 @@ def load_data(data_dir=r'C:\PythonBC\RootData', fname='2019-04-27.csv', Verbose=
 	mycols = [ele for ele in mycols if ele not in unwanted]
 
 	if not all_cols:
-		# extract the user-defined columns from <mycols>
+		# extract the user-defined columns from <mycols> if they are also in <sub_cols>
 		mycols = [ele for ele in mycols if ele in sub_cols]
 	
 	# specify datatypes for each column
