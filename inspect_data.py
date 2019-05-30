@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # -*- coding: utf-8 -*-
 """
 Created on Sat May 25 16:16:31 2019
@@ -21,6 +20,7 @@ import myplots as mp # my plotting functions
 
 zc = ZC() # initialize zip code class
 #%% load data
+
 fname_27 = '2019-04-27.csv'
 fname_28 = '2019-04-28.csv'
 
@@ -102,7 +102,8 @@ cross_val_score(clf, X_28, y_28, scoring='recall_macro', cv=5)
 '''
 
 #%% determine number of categories
-'''
+import time
+
 df_cats = lf.temp_load( os.path.join(data_dir, 'category.gzip') )
 cats = df_cats.category.unique().tolist()
 cats = [x for x in cats if str(x) != 'nan'] # remove nans
@@ -113,9 +114,9 @@ allcats = [item for sublist in allcats for item in sublist] # flatten list of li
 allcats = list(dict.fromkeys(allcats)) # remove duplicates
 print(f'there are {len(allcats)} unique categories in this dataset')
 
-for c in allcats:
-	print(c)
-'''
+#for c in allcats:
+#	print(c)
+
 #%% verify that all dataframes have the same shape
 '''
 import glob
@@ -148,7 +149,7 @@ df = pd.concat([df_var, df_clicks], axis=1)
 ax = mp.make_countplot(df,col='platform_carrier', count='clicks')
 '''
 #%% zipcode-level analysis
-
+'''
 df1 = lf.temp_load(os.path.join(data_dir,'geo_zip.gzip'))
 df2 = lf.temp_load(os.path.join(data_dir,'clicks.gzip'))
 frames = [df1, df2]
@@ -163,7 +164,7 @@ df = df.dropna(subset=['geo_zip']) # drop NaN values of zip codes
 zc = ZC()
 df['state'] = zc.zip_to_state_2(df.geo_zip)
 print(f'there are { df.state.isnull().sum()} ({100*df.state.isnull().sum() / df.shape[0]:3.3f}%) null state rows')
-
+'''
 #%% state-level analysis
 '''
 df1 = lf.temp_load(os.path.join(data_dir,'geo_zip.gzip'))

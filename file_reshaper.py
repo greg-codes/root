@@ -10,6 +10,7 @@ import os, glob, sys
 sys.path.append(os.getcwd()) # add cwd to path
 import load_file as lf
 import pandas as pd
+from zip_codes import ZC # zip code database
 #import numpy as np
 #from zipfile import ZipFile
 
@@ -95,4 +96,115 @@ def reshape_files(data_dir=r'C:\PythonBC\RootData', f_ext='.csv', big_zip=False,
 			lf.temp_save(df, os.path.join(data_dir, myfname) ) # save to disk using parquet method
 			print(f'   {myfname} saved')
 	print('all done!')
+	return
+
+def local_hour_creator(data_dir=r'C:\PythonBC\RootData', f_ext='.csv', big_zip=False, **kwargs):
+	'''
+	- calculates the bid_timestamp_local for all CSV files and saves to gzip.
+	- also calculates the local hour, local day, and local day_of_the_week and
+		saves to gzip
+	- converting to local time is a computationally slow/expensive processes, 
+		so we load one file at a time, and save those results to a temporary
+		file. once all times in all files have been calculated, we merge the 
+		results into a pair of files.
+	saves two files:
+		local_ordinals.gzip: hour, day and day_of_week (int8)
+		bid_timestamp_local.gzip: timestamps
+	
+	'''
+	# define the file name of the large zip file. assumed structure is a .zip
+	# file with many .csv files inside
+	bigzipname = 'root_ad_auction_dataset_all_data.zip'
+	
+	#initalize zipcode class
+	zc = ZC()
+	
+	#get sorted list of files to loop over
+	myfiles = sorted( glob.glob( os.path.join(data_dir, '*'+f_ext) ) )
+
+	# remove the big zip file from <myfiles>
+	if bigzipname in myfiles:
+		myfiles.remove(bigzipname)
+	if os.path.join(data_dir,'2019-04-00.csv') in myfiles: # this file is empty
+		myfiles.remove( os.path.join(data_dir,'2019-04-00.csv') )
+
+	if big_zip: # load the files from the mega zip file
+		print(f"this code not written yet. let's pretend this opened {bigzipname}")
+	else: # load files from individual csv/zip files
+		flist_TS_local = []
+		flist_locals = []
+		flist_tz = []
+		for f in myfiles:
+			print(f'loading {os.path.basename(f)} ... ', end='')
+			# load UTC timestamp and zip code info from CSV files
+			df_TS_utc = lf.load_data(data_dir=data_dir, fname=f, all_cols=False, sub_cols=['bid_timestamp_utc'], **kwargs)
+			df_geozip = lf.load_data(data_dir=data_dir, fname=f, all_cols=False, sub_cols=['geo_zip'], **kwargs)
+			df = pd.concat([df_TS_utc, df_geozip], axis=1)
+			#print(df.head())
+			
+			# compute local timestamp
+			df['tz'] = zc.zip_to_tz_2( df.geo_zip )
+			#print(df.tz.head())
+			df_TS_local = zc.shift_tz_wrap( df, style='careful' )
+			
+			# compute local hour, day and day of the week
+			df_locals = pd.DataFrame({'hour': zc.local_hour(df_TS_local), 'day':zc.local_day(df_TS_local), 'day_of_week':zc.local_weekday(df_TS_local)} )
+			df_locals = df_locals.astype('int8')
+			
+			# drop the bid_timestamp_utc and geo_zip columns
+			df_TS_local = df_TS_local.drop(['bid_timestamp_utc', 'geo_zip'], axis=1)
+			df_tz = pd.DataFrame( df['tz'] ) # save the tz column as a separate df
+			df_TS_local = df_TS_local.drop(['tz'], axis=1)
+			
+			#save things to disk (temporarily) to save RAM
+			fname_TS_local = os.path.join(data_dir, 'TS_local_' + os.path.basename(f).split('.')[0] + '.gzip')
+			fname_locals = os.path.join(data_dir, 'locals_' + os.path.basename(f).split('.')[0] + '.gzip')
+			fname_tz = os.path.join(data_dir, 'tz_' + os.path.basename(f).split('.')[0] + '.gzip')
+			
+			# remember the file names we use for later
+			flist_TS_local.append(fname_TS_local)
+			flist_locals.append(fname_locals)
+			flist_tz.append(fname_tz)
+			
+			# save to disk using parquet method
+			lf.temp_save(df_TS_local, os.path.join(data_dir, fname_TS_local) )
+			lf.temp_save(df_locals, os.path.join(data_dir, fname_locals) )
+			lf.temp_save(df_tz, os.path.join(data_dir, fname_tz) )
+			print(' done')
+		# now, go through the saved files and combine them into a single large file
+		# we can load all the parquet files at once without issue
+		print('saving summed gzip files ... ', end='')
+		
+		# save bid_timestamp_local
+		df_from_each_file = (lf.temp_load(fname=f) for f in flist_TS_local)
+		df_TS_local = pd.concat(df_from_each_file, ignore_index=True)
+		lf.temp_save(df_TS_local, fname=os.path.join(data_dir,'bid_timestamp_local.gzip') )
+		print('bid_timestamp_local.gzip ... ', end='')
+		
+		#save local_ordinals (hour, day, day_of_week)
+		df_from_each_file2 = (lf.temp_load(fname=f) for f in flist_locals)
+		df_locals = pd.concat(df_from_each_file2, ignore_index=True)
+		#df_locals = df_locals.astype('category')
+		df_locals = df_locals.astype('int8')
+		lf.temp_save(df_locals, fname=os.path.join(data_dir,'local_ordinals.gzip') )
+		print('local_ordinals.gzip ... ', end='')
+
+		#save time zones
+		df_from_each_file3 = (lf.temp_load(fname=f) for f in flist_tz)
+		df_tz = pd.concat(df_from_each_file3, ignore_index=True)
+		df_tz = df_tz.astype('category')
+		lf.temp_save(df_tz, fname=os.path.join(data_dir,'tz.gzip') )
+		print('tz.gzip')
+
+		# remove daily gzips from disk when done
+		for f in flist_TS_local:
+			os.remove(f)
+			
+		for f in flist_locals:
+			os.remove(f)
+			
+		for f in flist_tz:
+			os.remove(f)
+		print('temp gzip files deleted')
+		print('all done!')
 	return

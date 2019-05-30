@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # -*- coding: utf-8 -*-
 """
 Created on Sat May 25 20:29:35 2019
@@ -131,15 +130,43 @@ class ZC():
 		'''
 		return pd_s.tz_localize(None)
 	
-	def shift_tz_wrap(self, pd_df):
+	def strip_tz_2(self, pd_s):
+		'''
+		- shifts from UTC to local timezone
+		- same functionality as strip_tz, but this one handles errors better
+		- if a non-TimeStamp object is passed, it returns a 'fake' date instead
+		of crashing
+		'''
+		if type(pd_s) == float: # there was an error computing the timezone
+			# there was an error computing the timezone
+			# return a nonsense time and continue
+			return pd.Timestamp(2000, 1, 1, 12)
+		else: # everything is fine
+			return pd_s.tz_localize(None)
+	
+	def shift_tz_wrap(self, pd_df, style='normal'):
 		'''wrapper function for strip_tz and shift_tz_3'''
 		pd_df['bid_timestamp_local'] = self.shift_tz_3(pd_df)
-		pd_df['bid_timestamp_local'] = pd_df['bid_timestamp_local'].apply( self.strip_tz )
+		if style == 'normal':
+			pd_df['bid_timestamp_local'] = pd_df['bid_timestamp_local'].apply( self.strip_tz )
+		if style == 'careful':
+			pd_df['bid_timestamp_local'] = pd_df['bid_timestamp_local'].apply( self.strip_tz_2 )			
 		return pd_df
 	
 	def local_hour(self, pd_df):
 		'''computes the hour of the local time'''
 		return pd_df["bid_timestamp_local"].dt.hour.values.astype('int8')
+	
+	def local_day(self, pd_df):
+		'''computes the day (i.e., 11 for May 11) of the local time'''
+		return pd_df["bid_timestamp_local"].dt.day.values.astype('int8')
+
+	def local_weekday(self, pd_df):
+		'''computes the weekday (i.e., Tuesday) of the local time
+		represented as an integer.
+		Monday=0, ... Sunday=6
+		'''
+		return pd_df["bid_timestamp_local"].dt.weekday.values.astype('int8')
 
 #%% useage examples
 

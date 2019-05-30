@@ -49,6 +49,32 @@ def unique_counter(pd_series):
 	print( '{0} has {1} unique elements ({2}%)'.format(name, u_len, 100*u_len/pd_len) )
 	return
 
+def cat_cleaner(cat):
+	'''
+	given a categorical string, this function splits, cleans, sorts and 
+	recombines with spaces in between category values
+	
+	cat: input. string of categories separated by commas. may have misspellings, nan's or other 
+		known bad features. example:
+			cat = 'IAB1,IAB1_1,IAB1_6,IAB2,IAB3,IAB3_4,IAB5,IAB6,IAB7,IAB7_1,IAB7_32,IAB7_44,IAB8,IAB8_17,IAB9,IAB9_1,IAB9_10,IAB9_11,IAB9_5,IAB9_7,-1,IAB7_,I,,,'
+		this cat has a -1, a typo (IAB7_) and empty entries (,,,)
+	'''
+	# list of known bad categories / typos to be removed
+	bad_cats = ['-1', 'IAB', 'IAB7_', 'IA', 'I', ' ', 'nan', 'NaN']
+	
+	# split into individual elements
+	cat_list = cat.split(',')
+
+	#correct common misspellings
+	cleancat = ['IAB7' if s=='IAB7_' else s for s in cat_list]
+
+	# remove known bad elements from cat_list, including empty strings
+	cleancat = sorted(list(set(cat_list)-set(bad_cats)))
+	cleancat = list(filter(None, cleancat))
+
+	# convert back to a string of elements separated by spaces
+	return ' '.join(cleancat)
+
 def load_data(data_dir=r'C:\PythonBC\RootData', fname='2019-04-27.csv', Verbose=False, all_cols=True, sub_cols=['geo_zip'], **kwargs):
 	'''loads a CSV or ZIP file to a pandas dataframe. note: can only work with a single compressed file, not a bundle of compressed files
 	
@@ -148,8 +174,8 @@ def load_data(data_dir=r'C:\PythonBC\RootData', fname='2019-04-27.csv', Verbose=
 		df.geo_zip = df.geo_zip.apply(fix_zipcode)
 		df.geo_zip = df.geo_zip.astype('category')
 
-	#if 'hour' in mycols:
-	#	df.hour = fix_hour(df.hour)
+	if 'category' in mycols: #remove bad categories
+		df.category = df.category.apply( cat_cleaner )
 
 	# drop useless columns
 	#df = df.drop(columns = ['auction_id']) # has no predictive power
