@@ -138,7 +138,7 @@ def local_hour_creator(data_dir=r'C:\PythonBC\RootData', f_ext='.csv', big_zip=F
 	bigzipname = 'root_ad_auction_dataset_all_data.zip'
 	
 	#initalize zipcode class
-	zc = ZC()
+	zc = ZC('')
 	
 	#get sorted list of files to loop over
 	myfiles = sorted( glob.glob( os.path.join(data_dir, '*'+f_ext) ) )
@@ -238,5 +238,5 @@ def local_hour_creator(data_dir=r'C:\PythonBC\RootData', f_ext='.csv', big_zip=F
 #reshape_files(data_dir=data_dir, f_ext='.csv')
 
 #reshape data from (days) to (columns) using *only specified columns* 
-#mysub_cols = ['category'] # specify which columns you want here
+#mysub_cols = ['segments'] # specify which columns you want here
 #reshape_files(data_dir=data_dir, f_ext='.csv', all_cols=False, sub_cols=mysub_cols)

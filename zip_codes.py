@@ -171,7 +171,7 @@ class ZC():
 #%% useage examples
 
 ### single-line use
-#zc = ZC(fdir=r'C:\PythonBC\root') #initialize
+#zc = ZC(fdir='') #initialize
 #zc.zip_to_tz('43212') # 'America/New_York'
 #zc.zip_to_state('43212') # 'OH'
 #zc.zip_to_county('43212') # 'Frankin'

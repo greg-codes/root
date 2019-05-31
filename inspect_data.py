@@ -18,15 +18,17 @@ from zip_codes import ZC # zip code database
 import load_file as lf # file i/o
 import myplots as mp # my plotting functions
 
-zc = ZC() # initialize zip code class
 #%% load data
 
+fname_01 = '2019-04-01.csv'
 fname_27 = '2019-04-27.csv'
 fname_28 = '2019-04-28.csv'
 
 data_dir = r'C:\PythonBC\RootData'
+zc = ZC(fdir='') # initialize zip code class
 
-#df_27 = lf.load_wrapper(fname=fname_27, data_dir=data_dir, nrows=50000)
+#df_01 = lf.load_wrapper(fname=fname_01, data_dir=data_dir)
+df_27 = lf.load_wrapper(fname=fname_27, data_dir=data_dir)
 #df_28 = lf.load_wrapper(fname=fname_28, data_dir=data_dir, nrows=50000)
 
 #%% save pd.df to disk after we are done modifying it
@@ -47,7 +49,7 @@ ax = mp.make_countplot(df_27,col='platform_device_screen_size', count='clicks')
 ax = mp.make_countplot(df_27,col='creative_type', count='clicks')
 ax = mp.make_countplot(df_27,col='hour', count='clicks', order=False); ax.set_xlabel('local hour')
 ax = mp.make_countplot(df_27,col='tz', count='clicks'); ax.set_xlabel('time zone')
-ax = mp.make_countplot(df_27,col='state', count='clicks')
+ax = mp.make_countplot(df_27,col='inventory_source', count='clicks')
 
 ax = mp.utc_vs_local(df_27)
 
@@ -57,6 +59,13 @@ g = g.map(sns.distplot, "hour", bins=list(np.arange(0,25)), norm_hist=True, labe
 g = sns.FacetGrid(df_27, col="clicks")
 g = g.map(sns.distplot, "hour", bins=list(np.arange(0,25)), norm_hist=True, label='local hour')
 '''
+#%% histograms using .gzip
+
+df = lf.temp_load( os.path.join(data_dir, 'day_of_week.gzip' ))
+df2 = lf.temp_load( os.path.join(data_dir, 'clicks.gzip' ))
+df3 = pd.concat( [df,df2], axis=1)
+ax = mp.make_countplot(df3,col='day_of_week', count=None, order=False); ax.set_xlabel('day_of_week')
+
 
 #%% first pass at making a model for clicks
 '''

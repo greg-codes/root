@@ -17,16 +17,28 @@ def make_countplot(pd_df, col='platform_device_make', count='clicks', order=True
 	'''
 	fig, ax = plt.subplots()
 	if order:
-		sns.countplot(x=col,
+		if count == None:
+			sns.countplot(x=col,
+			  data=pd_df,
+			  order=pd_df[col].value_counts().index,
+			  ax=ax)	
+		else:
+			sns.countplot(x=col,
 			  data=pd_df,
 			  order=pd_df[col].value_counts().index,
 			  hue=count,
 			  ax=ax)
 	else:
-		sns.countplot(x=col,
-			  data=pd_df,
-			  hue=count,
-			  ax=ax)
+		if count == None:
+			sns.countplot(x=col,
+				  data=pd_df,
+				  hue=count,
+				  ax=ax)			
+		else:	
+			sns.countplot(x=col,
+				  data=pd_df,
+				  hue=count,
+				  ax=ax)
 	ax.set_xticklabels(ax.get_xticklabels(), rotation=40, ha="right")
 	ax.set_yscale('log')
 	plt.tight_layout()
