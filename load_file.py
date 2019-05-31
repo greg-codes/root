@@ -75,6 +75,12 @@ def cat_cleaner(cat):
 	# convert back to a string of elements separated by spaces
 	return ' '.join(cleancat)
 
+def segment_cleaner(seg):
+	''' cleans the segment column '''
+	seg = str(seg) # force string conversion
+	seg = seg.translate( {ord(c): None for c in '[,]'} ) # drop [] and commas
+	return ' '.join(sorted(seg.split(' '))) # split, sort and recombine with spaces
+
 def load_data(data_dir=r'C:\PythonBC\RootData', fname='2019-04-27.csv', Verbose=False, all_cols=True, sub_cols=['geo_zip'], **kwargs):
 	'''loads a CSV or ZIP file to a pandas dataframe. note: can only work with a single compressed file, not a bundle of compressed files
 	
@@ -121,7 +127,7 @@ def load_data(data_dir=r'C:\PythonBC\RootData', fname='2019-04-27.csv', Verbose=
 		  'installs']
 	
 	#we never want these columns, drop them from <mycols>
-	unwanted = ['auction_id', 'platform_os', 'day', 'month', 'year', 'hour']
+	unwanted = ['auction_id', 'platform_os', 'day', 'month', 'year', 'hour', 'creative_size']
 	mycols = [ele for ele in mycols if ele not in unwanted]
 
 	if not all_cols:
@@ -176,11 +182,21 @@ def load_data(data_dir=r'C:\PythonBC\RootData', fname='2019-04-27.csv', Verbose=
 
 	if 'category' in mycols: #remove bad categories
 		df.category = df.category.apply( cat_cleaner )
+	
+	if 'platform_carrier' in mycols: # fix bad platform_carriers
+		df.platform_carrier = df.platform_carrier.replace(['-1'], np.nan)
+	
+	if 'platform_device_make' in mycols:
+		df.platform_device_make = df.platform_device_make.replace( [' ', '-1'], np.nan )
+	
+	if 'platform_device_model' in mycols:
+		df.platform_device_model = df.platform_device_model.replace([' ', '-1'], np.nan)
+	
+	if 'platform_device_screen_size' in mycols:
+		df.platform_device_screen_size = df.platform_device_screen_size.replace(['nan', ' ', '-1', 'NaN', 'UNKNOWN'], value=np.nan)
 
-	# drop useless columns
-	#df = df.drop(columns = ['auction_id']) # has no predictive power
-	#df = df.drop(columns = ['platform_os']) # only consists of 'Android' or '-1'
-	#df = df.drop(columns = ['day', 'month', 'year', 'hour']) #these numbers correspond to UTC, not useful
+	if 'segments' in mycols:
+		df.segments = df.segments.apply( segment_cleaner )
 	if Verbose:
 		print('memory size after downcasting:', mem_usage(df))
 	return df
@@ -208,17 +224,17 @@ def temp_load(fname='df.gzip'):
 	return df
 
 def load_wrapper(data_dir, fname, **kwargs):
-	zc = ZC() # initialize zip code class
+	zc = ZC('') # initialize zip code class
 	df = load_data(fname=fname, data_dir=data_dir, **kwargs)
 	df = df.dropna(subset=['geo_zip']) # drop NaN values of zip codes
-	
+
 	# use zip code to calculate things
-	df['tz'] = zc.zip_to_tz_2(df.geo_zip)
+	df['tz'] = zc.zip_to_tz_2(df.geo_zip) # get timezone
 	df['tz'] = df.tz.astype('category')
-	df['state'] = zc.zip_to_state_2(df.geo_zip)
+	df['state'] = zc.zip_to_state_2(df.geo_zip) # get state
 	df['state'] = df.state.astype('category')
-	df = df.dropna( subset=['tz']) # drop rows that don't have a timezone
-	df = zc.shift_tz_wrap(df) # create new column of local times
+	#df = df.dropna( subset=['tz']) # drop rows that don't have a timezone
+	df = zc.shift_tz_wrap(df, style='careful') # get local times
 	df['hour'] = zc.local_hour(df) # create new column of local hour
 	return df
 #%% example usage
