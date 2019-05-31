@@ -73,7 +73,7 @@ def reshape_files(data_dir=r'C:\PythonBC\RootData', f_ext='.csv', big_zip=False,
 			  'installs']
 
 	# always drop these columns
-	unwanted = ['auction_id', 'platform_os', 'day', 'month', 'year', 'hour']
+	unwanted = ['auction_id', 'platform_os', 'day', 'month', 'year', 'hour', 'creative_size', 'day_of_week']
 	
 	#drop the unwanted columns from mycols
 	mycols = [ele for ele in mycols if ele not in unwanted]
@@ -103,19 +103,19 @@ def reshape_files(data_dir=r'C:\PythonBC\RootData', f_ext='.csv', big_zip=False,
 				print(f'loading {col}...', end='')
 				df_from_each_file = (lf.load_data(data_dir=data_dir, fname=f, all_cols=False, sub_cols=[col], **kwargs) for f in myfiles)
 				df = pd.concat(df_from_each_file, ignore_index=True)
-				print('done')
+				print(' saving ...', end='')
 				myfname = col + '.gzip'
 				lf.temp_save(df, os.path.join(data_dir, myfname) ) # save to disk using parquet method
-				print(f'   {myfname} saved')
+				print(f' {myfname} saved')
 		else:
 			for col in mycols: # loop through all items in mycols
 				print(f'loading {col}...', end='')
 				df_from_each_file = (lf.load_data(data_dir=data_dir, fname=f, all_cols=False, sub_cols=[col], **kwargs) for f in myfiles)
 				df = pd.concat(df_from_each_file, ignore_index=True)
-				print('done')
+				print(' saving ...', end='')
 				myfname = col + '.gzip'
 				lf.temp_save(df, os.path.join(data_dir, myfname) ) # save to disk using parquet method
-				print(f'   {myfname} saved')
+				print(f' {myfname} saved')
 	print('all done!')
 	return
 
@@ -155,45 +155,53 @@ def local_hour_creator(data_dir=r'C:\PythonBC\RootData', f_ext='.csv', big_zip=F
 		flist_TS_local = []
 		flist_locals = []
 		flist_tz = []
+		flist_state = []
 		for f in myfiles:
 			print(f'loading {os.path.basename(f)} ... ', end='')
 			# load UTC timestamp and zip code info from CSV files
 			df_TS_utc = lf.load_data(data_dir=data_dir, fname=f, all_cols=False, sub_cols=['bid_timestamp_utc'], **kwargs)
 			df_geozip = lf.load_data(data_dir=data_dir, fname=f, all_cols=False, sub_cols=['geo_zip'], **kwargs)
 			df = pd.concat([df_TS_utc, df_geozip], axis=1)
-			#print(df.head())
 			
-			# compute local timestamp
+			# compute local timestamp and state
 			df['tz'] = zc.zip_to_tz_2( df.geo_zip )
-			#print(df.tz.head())
 			df_TS_local = zc.shift_tz_wrap( df, style='careful' )
+			df['state'] = zc.zip_to_state_2( df.geo_zip )
 			
 			# compute local hour, day and day of the week
 			df_locals = pd.DataFrame({'hour': zc.local_hour(df_TS_local), 'day':zc.local_day(df_TS_local), 'day_of_week':zc.local_weekday(df_TS_local)} )
 			df_locals = df_locals.astype('int8')
 			
+			# compute the state from the zip code
+			df['state'] = zc.zip_to_state_2(df.geo_zip)
+			df['state'] = df.state.astype('category')
+			
 			# drop the bid_timestamp_utc and geo_zip columns
 			df_TS_local = df_TS_local.drop(['bid_timestamp_utc', 'geo_zip'], axis=1)
 			df_tz = pd.DataFrame( df['tz'] ) # save the tz column as a separate df
-			df_TS_local = df_TS_local.drop(['tz'], axis=1)
+			df_state = pd.DataFrame( df['state'] ) # save the state column as a separate df
+			df_TS_local = df_TS_local.drop(['tz', 'state'], axis=1) #drop tz and state
 			
 			#save things to disk (temporarily) to save RAM
 			fname_TS_local = os.path.join(data_dir, 'TS_local_' + os.path.basename(f).split('.')[0] + '.gzip')
 			fname_locals = os.path.join(data_dir, 'locals_' + os.path.basename(f).split('.')[0] + '.gzip')
 			fname_tz = os.path.join(data_dir, 'tz_' + os.path.basename(f).split('.')[0] + '.gzip')
+			fname_state = os.path.join(data_dir, 'state_' + os.path.basename(f).split('.')[0] + '.gzip')
 			
 			# remember the file names we use for later
 			flist_TS_local.append(fname_TS_local)
 			flist_locals.append(fname_locals)
 			flist_tz.append(fname_tz)
+			flist_state.append(fname_state)
 			
 			# save to disk using parquet method
 			lf.temp_save(df_TS_local, os.path.join(data_dir, fname_TS_local) )
 			lf.temp_save(df_locals, os.path.join(data_dir, fname_locals) )
 			lf.temp_save(df_tz, os.path.join(data_dir, fname_tz) )
+			lf.temp_save(df_state, os.path.join(data_dir, fname_state) )
 			print(' done')
-		# now, go through the saved files and combine them into a single large file
-		# we can load all the parquet files at once without issue
+		
+		# go through the saved files and combine them into a single large file
 		print('saving summed gzip files ... ', end='')
 		
 		# save bid_timestamp_local
@@ -205,7 +213,6 @@ def local_hour_creator(data_dir=r'C:\PythonBC\RootData', f_ext='.csv', big_zip=F
 		#save local_ordinals (hour, day, day_of_week)
 		df_from_each_file2 = (lf.temp_load(fname=f) for f in flist_locals)
 		df_locals = pd.concat(df_from_each_file2, ignore_index=True)
-		#df_locals = df_locals.astype('category')
 		df_locals = df_locals.astype('int8')
 		lf.temp_save(df_locals, fname=os.path.join(data_dir,'local_ordinals.gzip') )
 		print('local_ordinals.gzip ... ', end='')
@@ -216,7 +223,14 @@ def local_hour_creator(data_dir=r'C:\PythonBC\RootData', f_ext='.csv', big_zip=F
 		df_tz = df_tz.astype('category')
 		lf.temp_save(df_tz, fname=os.path.join(data_dir,'tz.gzip') )
 		print('tz.gzip')
-
+		
+		#save state
+		df_from_each_file4 = (lf.temp_load(fname=f) for f in flist_state)
+		df_state = pd.concat(df_from_each_file4, ignore_index=True)
+		df_state = df_state.astype('category')
+		lf.temp_save(df_state, fname=os.path.join(data_dir,'state.gzip') )
+		print('state.gzip')
+		
 		# remove daily gzips from disk when done
 		for f in flist_TS_local:
 			os.remove(f)
@@ -226,6 +240,10 @@ def local_hour_creator(data_dir=r'C:\PythonBC\RootData', f_ext='.csv', big_zip=F
 			
 		for f in flist_tz:
 			os.remove(f)
+		
+		for f in flist_state:
+			os.remove(f)
+		
 		print('temp gzip files deleted')
 		print('all done!')
 	return
@@ -240,3 +258,6 @@ def local_hour_creator(data_dir=r'C:\PythonBC\RootData', f_ext='.csv', big_zip=F
 #reshape data from (days) to (columns) using *only specified columns* 
 #mysub_cols = ['segments'] # specify which columns you want here
 #reshape_files(data_dir=data_dir, f_ext='.csv', all_cols=False, sub_cols=mysub_cols)
+
+# create local timestamp data
+#local_hour_creator(data_dir=data_dir)

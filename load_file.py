@@ -127,7 +127,7 @@ def load_data(data_dir=r'C:\PythonBC\RootData', fname='2019-04-27.csv', Verbose=
 		  'installs']
 	
 	#we never want these columns, drop them from <mycols>
-	unwanted = ['auction_id', 'platform_os', 'day', 'month', 'year', 'hour', 'creative_size']
+	unwanted = ['auction_id', 'platform_os', 'day', 'day_of_week', 'month', 'year', 'hour', 'creative_size']
 	mycols = [ele for ele in mycols if ele not in unwanted]
 
 	if not all_cols:
@@ -174,7 +174,8 @@ def load_data(data_dir=r'C:\PythonBC\RootData', fname='2019-04-27.csv', Verbose=
 	# do some dtype conversions on columns to save memory, clean data
 	
 	if 'bid_timestamp_utc' in mycols:
-		df.bid_timestamp_utc = pd.to_datetime( df.bid_timestamp_utc, format='%Y-%m-%d %H:%M:%S.%f', errors='coerce', utc=True ) # fix timestamp
+		# manually add the UTC timezone to this column
+		df.bid_timestamp_utc = pd.to_datetime( df.bid_timestamp_utc, format='%Y-%m-%d %H:%M:%S.%f', errors='coerce', utc=True )
 	
 	if 'geo_zip' in mycols:
 		df.geo_zip = df.geo_zip.apply(fix_zipcode)
