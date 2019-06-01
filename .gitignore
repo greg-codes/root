@@ -171,6 +171,6 @@ dmypy.json
 
 # exlude specific files (sensitive information)
 check_columns.py
-root_presentation.ipynb
+#root_presentation.ipynb
 
 # End of https://www.gitignore.io/api/macos,python,jupyternotebook,jupyternotebooks
