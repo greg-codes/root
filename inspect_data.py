@@ -20,9 +20,9 @@ import myplots as mp # my plotting functions
 
 #%% load data
 
-fname_01 = '2019-04-01.csv'
-fname_27 = '2019-04-27.csv'
-fname_28 = '2019-04-28.csv'
+#fname_01 = '2019-04-01.csv'
+#fname_27 = '2019-04-27.csv'
+#fname_28 = '2019-04-28.csv'
 
 data_dir = r'C:\PythonBC\RootData'
 zc = ZC(fdir='') # initialize zip code class
@@ -211,3 +211,27 @@ df['tz'] = df.tz.astype('category')
 df['bid_timestamp_local'] = zc.shift_tz_wrap(df) # compute local time
 df['hour'] = zc.local_hour(df) # compute local hour
 '''
+
+#%% track clicks vs date
+fname = 'clicks.gzip'
+df_clicks = lf.temp_load( os.path.join(data_dir, fname)  )
+
+fname = 'local_ordinals.gzip'
+df_localords = lf.temp_load( os.path.join(data_dir, fname)  )
+
+fname = 'installs.gzip'
+df_installs = lf.temp_load( os.path.join(data_dir, fname)  )
+
+fname = 'state.gzip'
+df_state = lf.temp_load( os.path.join(data_dir, fname)  )
+
+frames = [df_localords, df_clicks, df_installs, df_state]
+df = pd.concat(frames, axis=1)
+
+ax = mp.make_countplot(df, col='day', count='clicks', order=False)
+ax = mp.make_countplot(df, col='hour', count='clicks', order=False)
+
+ax=mp.ratio_plot(df, col='hour', style='o-')
+ax=mp.ratio_plot(df, col='day_of_week')
+ax=mp.ratio_plot(df, col='day', style='o-')
+mp.ratio_plot(df, col='state') # non-numeric plots look messed up
