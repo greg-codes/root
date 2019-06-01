@@ -1,0 +1,103 @@
+'''
+Quickstart guide
+================
+
+data "pipeline":
+
+1. convert files to .gzip format
+	a. reshape_files(): creates a .gzip file for each column using all the csv files in data_dir
+	b. local_hour_creator(): uses bid_timestamp_utc and geo_zip to calculate time-zone-related data using all the csv files in data_dir. writes .gzip files containing information derived from zip code (state, time zone, local hour, local day, local day_of_week).
+2. load files to memory/RAM
+	a. use the lf.temp_load function (for gzip)
+	b. or, use lf.load_wrapper (for csv)
+'''
+#sample code to get you started:
+#================================
+
+### load packages and modules
+import os, sys, time
+import pandas as pd
+import matplotlib.pyplot as plt
+import numpy as np
+import seaborn as sns
+plt.rcParams['figure.dpi'] = 240 # fix high-dpi display scaling issues (only if you have a 4k monitor)
+
+sys.path.append(os.getcwd()) # add cwd to path
+
+from zip_codes import ZC # zip code database
+import load_file as lf # file i/o
+import myplots as mp # my plotting functions
+import file_reshaper as fr # file reshaper
+
+zc = ZC(fdir='') # initialize zip code class
+
+### define your data directory
+data_dir = r'C:\PythonBC\RootData'
+
+### convert files to gzip (skip if you already have gzips)
+fr.reshape_files(data_dir=data_dir) # this will take 15-20 minutes
+fr.local_hour_creator(data_dir=data_dir) # this will take another 15-20 minutes
+
+###########################################
+### you can now quickly work with the data
+###########################################
+
+### example: load a gzip files into memory
+
+fname = 'clicks.gzip'
+df_clicks = lf.temp_load( os.path.join(data_dir, fname)  )
+#df_clicks is now a dataframe with a column of 36,340,988 TRUE/FALSE values. the index corresponds to the order in which it was loaded -- it is meaningless. however, all gzip files have a common index. so you can glue them together and then work with them as you would a normal pandaas.dataframe
+
+fname = 'bid_timestamp_local.gzip'
+df_localTS = lf.temp_load( os.path.join(data_dir, fname)  )
+# df_localTS is a dataframe with a column of 36,340,988 datetime64[ns] objects.
+# NOTE: rows where I couldn't compute the local time (i.e., no zip code or if the zipcode lookup failed) all have the local date set to 2000-01-01 12:00:00. There are about 368,136 of these rows.
+
+fname = 'state.gzip'
+df_state = lf.temp_load( os.path.join(data_dir, fname)  )
+# df_state is the US State (from the geo_zip column)
+
+fname = 'local_ordinals.gzip'
+df_localords = lf.temp_load( os.path.join(data_dir, fname)  )
+# df_localords is a dataframe with 3 columns (hour, day, day_of_week) and 36,340,988 rows.
+# day_of_week convention: monday=0, ... sunday=6.
+# all quantities are in local timezone, not UTC
+
+#combine multiple columns together
+frames = [df_localTS, df_localords, df_state, df_clicks ] # put as many columns as you want in frames
+df = pd.concat(frames, axis=1)
+
+# note: the entire memory footprint of all the gzip files is about 850 MB. small enough for a laptop!
+
+# you can subset df like normal, now
+df_monday = df[df.day_of_week==0] # mondays
+df_OH = df[df.state == 'OH'] # events in ohio
+
+#select between date ranges
+start_date = pd.Timestamp('2019-04-01 00:00')
+end_date = pd.Timestamp('2019-04-08 00:00')
+mask = (df['bid_timestamp_local'] > start_date) & (df['bid_timestamp_local'] <= end_date)
+df_1stweek = df.loc[mask]
+
+# sort by date
+df_sorted = df.sort_values(by='bid_timestamp_local')
+
+### example: load files from csv (slower than gzip)
+fname = '2019-04-27.csv'
+df_27 = lf.load_wrapper(data_dir=data_dir, fname=fname) # all the data from 4/27
+
+### some tricks
+lf.mem_usage(df_localTS) # prints RAM usage of pandas object
+# '277.260 MB'
+
+### example: making histograms
+#make a histogram of the 'platform_device_screen_size' with the value of clicks (T/F) as a secondary column
+ax = mp.make_countplot(df_27, col='platform_device_screen_size', count='clicks')
+
+#histogram of 'platform_device_screen_size' (no secondary column)
+ax = mp.make_countplot(df_27, col='platform_device_screen_size', count=None)
+
+#histogram of 'platform_device_screen_size', with arbitrary x-axis order
+ax = mp.make_countplot(df_27, col='platform_device_screen_size', count=None, order=False)
+
+
