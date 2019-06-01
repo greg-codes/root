@@ -39,7 +39,7 @@ from sklearn.utils.multiclass import unique_labels
 
 sys.path.append(os.getcwd())
 
-plt.rcParams['figure.dpi'] = 240
+#plt.rcParams['figure.dpi'] = 240
 #%%
 def plot_roc_curve(model, y_true, y_predicted, ax):
 	'''
