@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+	# -*- coding: utf-8 -*-
 """
 Created on Sat May 25 16:16:31 2019
 
@@ -28,7 +28,7 @@ data_dir = r'C:\PythonBC\RootData'
 zc = ZC(fdir='') # initialize zip code class
 
 #df_01 = lf.load_wrapper(fname=fname_01, data_dir=data_dir)
-df_27 = lf.load_wrapper(fname=fname_27, data_dir=data_dir)
+#df_27 = lf.load_wrapper(fname=fname_27, data_dir=data_dir)
 #df_28 = lf.load_wrapper(fname=fname_28, data_dir=data_dir, nrows=50000)
 
 #%% save pd.df to disk after we are done modifying it
@@ -61,10 +61,10 @@ g = g.map(sns.distplot, "hour", bins=list(np.arange(0,25)), norm_hist=True, labe
 '''
 #%% histograms using .gzip
 
-df = lf.temp_load( os.path.join(data_dir, 'day_of_week.gzip' ))
-df2 = lf.temp_load( os.path.join(data_dir, 'clicks.gzip' ))
-df3 = pd.concat( [df,df2], axis=1)
-ax = mp.make_countplot(df3,col='day_of_week', count=None, order=False); ax.set_xlabel('day_of_week')
+#df = lf.temp_load( os.path.join(data_dir, 'day_of_week.gzip' ))
+#df2 = lf.temp_load( os.path.join(data_dir, 'clicks.gzip' ))
+#df3 = pd.concat( [df,df2], axis=1)
+#ax = mp.make_countplot(df3,col='day_of_week', count=None, order=False); ax.set_xlabel('day_of_week')
 
 
 #%% first pass at making a model for clicks
@@ -112,17 +112,17 @@ cross_val_score(clf, X_28, y_28, scoring='recall_macro', cv=5)
 
 #%% determine number of categories
 
-df_cats = lf.temp_load( os.path.join(data_dir, 'category.gzip') )
-cats = df_cats.category.unique().tolist()
-cats = [x for x in cats if str(x) != 'nan'] # remove nans
-allcats = []
-for i in cats:
-	#allcats.append( i.split(',')) # comma-separated
-	allcats.append( i.split(' ')) # space-separated
-allcats = [item for sublist in allcats for item in sublist] # flatten list of lists
-allcats = list(dict.fromkeys(allcats)) # remove duplicates
-print(f'there are {len(cats)} unique bundles of categories in this dataset')
-print(f'there are {len(allcats)} unique IDF categories in this dataset')
+#df_cats = lf.temp_load( os.path.join(data_dir, 'category.gzip') )
+#cats = df_cats.category.unique().tolist()
+#cats = [x for x in cats if str(x) != 'nan'] # remove nans
+#allcats = []
+#for i in cats:
+#	#allcats.append( i.split(',')) # comma-separated
+#	allcats.append( i.split(' ')) # space-separated
+#allcats = [item for sublist in allcats for item in sublist] # flatten list of lists
+#allcats = list(dict.fromkeys(allcats)) # remove duplicates
+#print(f'there are {len(cats)} unique bundles of categories in this dataset')
+#print(f'there are {len(allcats)} unique IDF categories in this dataset')
 
 #for c in allcats:
 #	print(c)
