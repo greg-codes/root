@@ -18,6 +18,8 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.linear_model import SGDClassifier
 from sklearn.preprocessing import StandardScaler, RobustScaler
 from tqdm import tqdm
+from sklearn.decomposition import PCA
+import matplotlib.pyplot as plt
 
 sys.path.append(os.getcwd())
 import load_file as lf
@@ -34,7 +36,8 @@ df = df.sample(frac=1)
 #Process data in minibatches
 chunksize=100000
 model = SGDClassifier(loss='log', penalty='elasticnet', n_jobs=8)
-hash_encoder = ce.HashingEncoder(n_components=200)
+hash_encoder = ce.HashingEncoder(n_components=2000)
+loo = ce.LeaveOneOutEncoder()
 scaler = RobustScaler()
 for n in  tqdm(np.arange(1,2)):
 	X = df.iloc[n*chunksize:(n+1)*chunksize]
@@ -42,7 +45,7 @@ for n in  tqdm(np.arange(1,2)):
 	X = X.drop(['clicks','bid_timestamp_utc', 'tz', 'spend', 'installs'], axis=1)
 	X['bid_timestamp_local'] = X['bid_timestamp_local'].dt.hour
 	X['bid_floor'] = np.transpose(scaler.fit_transform([X.bid_floor.values]))
-	X = hash_encoder.fit_transform(X,y)
+	X = loo.fit_transform(X,y)
 	
 	X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=0)
 	sm = SMOTE(random_state=2)
@@ -55,8 +58,16 @@ for n in  tqdm(np.arange(1,2)):
 #diplay metrics for model performance
 print(model.score(X_test, y_test))
 mm.model_report_card(model, X_train_res, y_train_res, X_test, y_test, normalize=True)
-
-
-
+#%%
+pca = PCA(n_components = 2)
+X_pca = pca.fit_transform(X_train_res)
+print(X_pca.shape)
+fig, ax = plt.subplots()
+ax.scatter(X_pca[:,0],X_pca[:,1], c=y_train_res)
+#%%
+from sklearn.manifold import TSNE
+tsne = TSNE(n_components = 2).fit_transform(X_train)
+fig, ax = plt.subplots()
+ax.scatter(tsne[:,0],tsne[:,1], c=y_train)
 
 
